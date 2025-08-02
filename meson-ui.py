@@ -31,6 +31,6 @@ if __name__ == "__main__":
             # os.path.join("code", "tests", "test_mainapp.py"),
             # os.path.join("code", "tests", "test_dialogs.py"),
             os.path.join("code", "tests", "test_background.py")
-        ])
+        ]) # TODO: need to ensure all test are run
     else:
         print("Usage: python project.py [test]")
