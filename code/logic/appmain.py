@@ -26,6 +26,7 @@ from .dialog.setup import SetupDialog
 from .dialog.init import InitDialog
 
 
+# TODO: remove theme logic for now
 class MesonBuildGUI:
     def __init__(self, root):
         self.root = root
