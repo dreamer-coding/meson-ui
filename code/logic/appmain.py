@@ -11,8 +11,6 @@
 # ==============================================================================
 #
 from tkinter.scrolledtext import ScrolledText
-import tkinter.filedialog
-import tkinter.messagebox
 import tkinter.ttk as ttk
 import tkinter as tk
 import webbrowser
@@ -20,7 +18,7 @@ import threading
 import os
 
 from .mesonbuild import MesonBuild
-from .appinfo import AppInfo, AppSettings
+from .appinfo import AppInfo, AppThemes
 from .dialog.subprojects import SubprojectsDialog
 from .dialog.configure import ConfigureDialog
 from .dialog.tutorial import TutorialDialog
@@ -36,8 +34,6 @@ class MesonBuildGUI:
         self.root.resizable(False, False)
 
         self.app_info = AppInfo()
-        self.app_settings = AppSettings()
-        self.theme = self.app_settings.get_theme()
         self.apply_styles()
         self.create_widgets()
         self.apply_theme()
@@ -132,7 +128,7 @@ class MesonBuildGUI:
             font=("Helvetica", 10, "bold"),
         )
         self.build_dir_entry = ttk.Entry(self.root, width=50)
-        self.build_dir_entry.insert(0, self.app_settings.get_build_dir())
+        self.build_dir_entry.insert(0, "builddir")
         self.clear_paths_button = ttk.Button(
             self.root,
             text="Clear Paths",
@@ -245,11 +241,6 @@ class MesonBuildGUI:
     def open_url(self, url):
         webbrowser.open(url)
 
-    def set_theme(self, theme):
-        self.theme = theme
-        self.app_settings.set_theme(theme)
-        self.apply_theme()
-
     def apply_theme(self):
         meson_teal = "#4f5253"
         dark_bg = "#1e1e1e"
@@ -301,7 +292,7 @@ class MesonBuildGUI:
             build_dir = self.build_dir_entry.get()
             if not build_dir or not self.validate_directory(os.path.dirname(build_dir) or "."):
                 return
-            result = SetupDialog(self.root, self.theme).result
+            result = SetupDialog(self.root, self.apply_theme).result
             if result is None:
                 return
             build_dir, other_options = result
@@ -328,7 +319,7 @@ class MesonBuildGUI:
             build_dir = self.build_dir_entry.get()
             if not build_dir or not self.validate_directory(build_dir):
                 return
-            result = ConfigureDialog(self.root, self.theme).result
+            result = ConfigureDialog(self.root, self.apply_theme).result
             if result is None:
                 return
             build_dir, other_options = result
@@ -468,13 +459,13 @@ class MesonBuildGUI:
 
     def show_tutorial(self):
         try:
-            TutorialDialog(self.root, self.theme)
+            TutorialDialog(self.root, self.apply_theme)
         except Exception as e:
             tk.messagebox.showerror("Tutorial Error", f"Failed to open tutorial dialog: {str(e)}")
 
     def init_project(self):
         try:
-            result = InitDialog(self.root, self.theme).result
+            result = InitDialog(self.root, self.apply_theme).result
             if result is None:
                 return
             project_name, language, other_options = result
@@ -494,7 +485,7 @@ class MesonBuildGUI:
 
     def manage_subprojects(self):
         try:
-            SubprojectsDialog(self.root, self.theme)
+            SubprojectsDialog(self.root, self.apply_theme)
         except Exception as e:
             tk.messagebox.showerror("Subprojects Error", f"Failed to open subprojects dialog: {str(e)}")
 

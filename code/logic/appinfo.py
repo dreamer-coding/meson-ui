@@ -27,39 +27,6 @@ class AppInfo:
         return f"{self.name} v{self.version} by {self.author} ({self.email})"
 
 
-class AppSettings:
-    def __init__(self):
-        self.config_file = "settings.ini"
-        self.config = configparser.ConfigParser()
-        self.load_settings()
-
-    def load_settings(self):
-        if not os.path.exists(self.config_file):
-            self.create_default_settings()
-        self.config.read(self.config_file)
-
-    def create_default_settings(self):
-        self.config["Settings"] = {"build_dir": "builddir", "theme": "meson"}
-        with open(self.config_file, "w") as configfile:
-            self.config.write(configfile)
-
-    def get_theme(self):
-        return self.config.get("Settings", "theme", fallback="meson")
-
-    def set_theme(self, theme):
-        self.config["Settings"]["theme"] = theme
-        with open(self.config_file, "w") as configfile:
-            self.config.write(configfile)
-
-    def get_build_dir(self):
-        return self.config.get("Settings", "build_dir", fallback="builddir")
-
-    def set_build_dir(self, build_dir):
-        self.config["Settings"]["build_dir"] = build_dir
-        with open(self.config_file, "w") as configfile:
-            self.config.write(configfile)
-
-
 class AppThemes:
     def __init__(self, root):
         self.root = root
