@@ -21,7 +21,7 @@ To install Meson-UI, follow these steps:
 
 Ensure you have the following prerequisites installed:
 
-- [Python 3.7+](https://www.python.org/downloads/)
+- [Python 3.10+](https://www.python.org/downloads/)
 - [Meson Build System](https://mesonbuild.com/)
 
 ### Steps

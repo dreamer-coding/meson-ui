@@ -24,11 +24,11 @@ setup(
     packages=find_packages(),  # Automatically find and include all packages
     classifiers=[
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: Apchie 2.0 License",
+        "License :: OSI Approved :: Apache 2.0 License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9"
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.13"
     ],
-    python_requires=">=3.7",  # Specify the minimum Python version required
+    python_requires=">=3.10",  # Specify the minimum Python version required
 )
