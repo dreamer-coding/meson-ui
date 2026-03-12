@@ -1,12 +1,14 @@
 name: Meson CI
 
 on:
+  schedule:
+    - cron: '15 21 * * *'
   push:
-    paths:
-      - "**.py"
+    branches:
+      - main
   pull_request:
-    paths:
-      - "**.py"
+    branches:
+      - main
 
 jobs:
   build_msvc:
