@@ -11,6 +11,8 @@
 # ==============================================================================
 #
 from tkinter.scrolledtext import ScrolledText
+import tkinter.filedialog
+import tkinter.messagebox
 import tkinter.ttk as ttk
 import tkinter as tk
 import webbrowser
@@ -26,13 +28,12 @@ from .dialog.setup import SetupDialog
 from .dialog.init import InitDialog
 
 
-# TODO: remove theme logic for now
 class MesonBuildGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Meson Build GUI")
         self.root.geometry("660x400")
-        self.root.resizable(False, False)  # Disable window resizing
+        self.root.resizable(False, False)
 
         self.app_info = AppInfo()
         self.app_settings = AppSettings()
@@ -201,11 +202,6 @@ class MesonBuildGUI:
         self.root.config(menu=menubar)
 
         options_menu = tk.Menu(menubar, tearoff=0)
-        themes_menu = tk.Menu(options_menu, tearoff=0)
-        themes_menu.add_command(label="Light", command=lambda: self.set_theme("light"))
-        themes_menu.add_command(label="Dark", command=lambda: self.set_theme("dark"))
-        themes_menu.add_command(label="Meson", command=lambda: self.set_theme("meson"))
-        options_menu.add_cascade(label="Themes", menu=themes_menu)
         options_menu.add_command(label="Tutorial", command=self.show_tutorial)
         options_menu.add_command(label="Version", command=self.show_version)
         options_menu.add_command(label="Clear Terminal", command=self.clear_terminal)
@@ -255,26 +251,17 @@ class MesonBuildGUI:
         self.apply_theme()
 
     def apply_theme(self):
-        if self.theme == "light":
-            self.root.configure(bg="white")
-            self.source_dir_label.configure(background="white", foreground="black")
-            self.build_dir_label.configure(background="white", foreground="black")
-            self.terminal.configure(background="black", foreground="white")
-            self.style.configure("Blue.TButton", background="white", foreground="black")
-        elif self.theme == "dark":
-            self.root.configure(bg="black")
-            self.source_dir_label.configure(background="black", foreground="light blue")
-            self.build_dir_label.configure(background="black", foreground="light blue")
-            self.terminal.configure(background="black", foreground="light blue")
-            self.style.configure("Blue.TButton", background="black", foreground="blue")
-        elif self.theme == "meson":
-            self.root.configure(bg="dark gray")
-            self.source_dir_label.configure(background="dark gray", foreground="black")
-            self.build_dir_label.configure(background="dark gray", foreground="black")
-            self.terminal.configure(background="black", foreground="white")
-            self.style.configure(
-                "Blue.TButton", background="#ADD8E6", foreground="black"
-            )
+        meson_teal = "#4f5253"
+        dark_bg = "#1e1e1e"
+        light_text = "#e0e0e0"
+        
+        self.root.configure(bg=dark_bg)
+        self.source_dir_label.configure(background=dark_bg, foreground=light_text)
+        self.build_dir_label.configure(background=dark_bg, foreground=light_text)
+        self.terminal.configure(background="#0d0d0d", foreground="#237bff")
+        self.style.configure(
+            "Blue.TButton", background=meson_teal, foreground="white"
+        )
 
     def browse_source_dir(self):
         try:
@@ -287,63 +274,69 @@ class MesonBuildGUI:
                 self.meson_build.source_dir = directory
                 self.meson_build.build_dir = os.path.join(directory, "builddir")
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Browse Directory Error", f"Failed to browse directory: {str(e)}")
 
     def clear_paths(self):
         try:
             self.source_dir_entry.delete(0, tk.END)
             self.build_dir_entry.delete(0, tk.END)
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Clear Paths Error", f"Failed to clear paths: {str(e)}")
 
     def validate_directory(self, directory):
         if not os.path.isdir(directory):
-            tk.messagebox.showerror("Error", f"Directory '{directory}' does not exist.")
+            tk.messagebox.showerror("Invalid Directory", f"Directory '{directory}' does not exist. Please check the path and try again.")
             return False
         return True
 
     def update_terminal(self, message):
         self.terminal.configure(state=tk.NORMAL)
-        self.terminal.insert(tk.END, message, "custom")
-        self.terminal.yview(tk.END)
+        self.terminal.insert(tk.END, message + "\n")
+        self.terminal.see(tk.END)
+        self.terminal.update()
         self.terminal.configure(state=tk.DISABLED)
 
     def setup_project(self):
         try:
+            build_dir = self.build_dir_entry.get()
+            if not build_dir or not self.validate_directory(os.path.dirname(build_dir) or "."):
+                return
             result = SetupDialog(self.root, self.theme).result
             if result is None:
                 return
             build_dir, other_options = result
-
-            if build_dir and self.validate_directory(build_dir):
-                threading.Thread(
-                    target=self.run_setup_thread, args=(build_dir, other_options)
-                ).start()
+            self.build_dir_entry.delete(0, tk.END)
+            self.build_dir_entry.insert(0, build_dir)
+            threading.Thread(
+                target=self.run_setup_thread, args=(build_dir, other_options), daemon=True
+            ).start()
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Setup Error", f"Failed to initialize project setup: {str(e)}")
 
     def run_setup_thread(self, build_dir, other_options):
         try:
+            self.meson_build.source_dir = self.source_dir_entry.get()
             self.meson_build.build_dir = build_dir
             self.update_terminal(f"Setting up the project in {build_dir}...\n")
             output = self.meson_build.setup(other_options)
             self.update_terminal(output)
         except Exception as e:
-            self.update_terminal(f"Error: {str(e)}\n")
+            self.update_terminal(f"Setup Error: Failed to set up project - {str(e)}")
 
     def configure_project(self):
         try:
+            build_dir = self.build_dir_entry.get()
+            if not build_dir or not self.validate_directory(build_dir):
+                return
             result = ConfigureDialog(self.root, self.theme).result
             if result is None:
                 return
             build_dir, other_options = result
-
-            if build_dir and self.validate_directory(build_dir):
-                threading.Thread(
-                    target=self.run_configure_thread, args=(build_dir, other_options)
-                ).start()
+            threading.Thread(
+                target=self.run_configure_thread, args=(build_dir, other_options), daemon=True
+            ).start()
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Configure Error", f"Failed to initialize project configuration: {str(e)}")
 
     def run_configure_thread(self, build_dir, other_options):
         try:
@@ -352,91 +345,97 @@ class MesonBuildGUI:
             output = self.meson_build.configure(other_options)
             self.update_terminal(output)
         except Exception as e:
-            self.update_terminal(f"Error: {str(e)}\n")
+            self.update_terminal(f"Configure Error: Failed to configure project - {str(e)}")
 
     def compile_project(self):
         try:
             build_dir = self.build_dir_entry.get()
-            if self.validate_directory(build_dir):
-                threading.Thread(target=self.run_compile_thread).start()
+            if not build_dir or not self.validate_directory(build_dir):
+                return
+            self.update_terminal("Compiling the project...\n")
+            threading.Thread(target=self.run_compile_thread, daemon=True).start()
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Compile Error", f"Failed to initialize project compilation: {str(e)}")
 
     def run_compile_thread(self):
         try:
             build_dir = self.build_dir_entry.get()
             self.meson_build.build_dir = build_dir
-            self.update_terminal(f"Compiling the project in {build_dir}...\n")
             output = self.meson_build.compile()
             self.update_terminal(output)
         except Exception as e:
-            self.update_terminal(f"Error: {str(e)}\n")
+            self.update_terminal(f"Compile Error: Compilation failed - {str(e)}")
 
     def test_project(self):
         try:
             build_dir = self.build_dir_entry.get()
-            if self.validate_directory(build_dir):
-                threading.Thread(target=self.run_test_thread).start()
+            if not build_dir or not self.validate_directory(build_dir):
+                return
+            self.update_terminal("Testing the project...\n")
+            threading.Thread(target=self.run_test_thread, daemon=True).start()
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Test Error", f"Failed to initialize project testing: {str(e)}")
 
     def run_test_thread(self):
         try:
             build_dir = self.build_dir_entry.get()
             self.meson_build.build_dir = build_dir
-            self.update_terminal(f"Testing the project in {build_dir}...\n")
             output = self.meson_build.test()
             self.update_terminal(output)
         except Exception as e:
-            self.update_terminal(f"Error: {str(e)}\n")
+            self.update_terminal(f"Test Error: Testing failed - {str(e)}")
 
     def install_project(self):
         try:
             build_dir = self.build_dir_entry.get()
-            if self.validate_directory(build_dir):
-                threading.Thread(target=self.run_install_thread).start()
+            if not build_dir or not self.validate_directory(build_dir):
+                return
+            self.update_terminal("Installing the project...\n")
+            threading.Thread(target=self.run_install_thread, daemon=True).start()
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Install Error", f"Failed to initialize project installation: {str(e)}")
 
     def run_install_thread(self):
         try:
             build_dir = self.build_dir_entry.get()
             self.meson_build.build_dir = build_dir
-            self.update_terminal(f"Installing the project in {build_dir}...\n")
             output = self.meson_build.install()
             self.update_terminal(output)
         except Exception as e:
-            self.update_terminal(f"Error: {str(e)}\n")
+            self.update_terminal(f"Install Error: Installation failed - {str(e)}")
 
     def show_version(self):
         try:
-            threading.Thread(target=self.run_version_thread).start()
+            self.update_terminal("Meson Version:\n")
+            threading.Thread(target=self.run_version_thread, daemon=True).start()
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Version Error", f"Failed to retrieve Meson version: {str(e)}")
 
     def run_version_thread(self):
         try:
-            self.update_terminal("Meson Version:\n")
             output = self.meson_build.run_command(["meson", "--version"])
             self.update_terminal(output)
         except Exception as e:
-            self.update_terminal(f"Error: {str(e)}\n")
+            self.update_terminal(f"Version Error: Failed to get Meson version - {str(e)}")
 
     def show_introspection(self):
         try:
-            threading.Thread(target=self.run_introspection_thread).start()
+            build_dir = self.build_dir_entry.get()
+            if not build_dir or not self.validate_directory(build_dir):
+                return
+            self.update_terminal(f"Introspecting build directory {build_dir}...\n")
+            threading.Thread(target=self.run_introspection_thread, daemon=True).start()
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Introspection Error", f"Failed to initialize introspection: {str(e)}")
 
     def run_introspection_thread(self):
         try:
             build_dir = self.build_dir_entry.get()
             self.meson_build.build_dir = build_dir
-            self.update_terminal(f"Introspecting build directory {build_dir}...\n")
             output = self.meson_build.introspect()
             self.update_terminal(output)
         except Exception as e:
-            self.update_terminal(f"Error: {str(e)}\n")
+            self.update_terminal(f"Introspection Error: Failed to introspect build - {str(e)}")
 
     def clear_terminal(self):
         try:
@@ -444,34 +443,34 @@ class MesonBuildGUI:
             self.terminal.delete("1.0", tk.END)
             self.terminal.configure(state=tk.DISABLED)
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Clear Terminal Error", f"Failed to clear terminal: {str(e)}")
 
     def get_tool_info(self):
         try:
-            threading.Thread(target=self.run_tool_info_thread).start()
+            self.update_terminal("Meson Build GUI Information:\n")
+            threading.Thread(target=self.run_tool_info_thread, daemon=True).start()
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Tool Info Error", f"Failed to retrieve tool information: {str(e)}")
 
     def run_tool_info_thread(self):
         try:
-            self.update_terminal("Meson Build GUI Information:\n")
             self.update_terminal(
                 "This tool assists in building Meson projects using a graphical user interface.\n"
             )
             self.update_terminal(
-                "It provides options to set up, compile, test, install, and get information about the Meson project.\n\n"
+                "It provides options to set up, compile, test, install, and get information about the Meson project.\n"
             )
             self.update_terminal(
                 f"Created by {self.app_info.author}, lead developer at Fossil Logic.\n"
             )
         except Exception as e:
-            self.update_terminal(f"Error: {str(e)}\n")
+            self.update_terminal(f"Tool Info Error: Failed to display information - {str(e)}")
 
     def show_tutorial(self):
         try:
             TutorialDialog(self.root, self.theme)
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Tutorial Error", f"Failed to open tutorial dialog: {str(e)}")
 
     def init_project(self):
         try:
@@ -479,26 +478,25 @@ class MesonBuildGUI:
             if result is None:
                 return
             project_name, language, other_options = result
-
+            self.update_terminal(f"Initializing the project {project_name}...\n")
             threading.Thread(
-                target=self.run_init_thread, args=(project_name, language, other_options)
+                target=self.run_init_thread, args=(project_name, language, other_options), daemon=True
             ).start()
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Init Error", f"Failed to initialize project: {str(e)}")
 
     def run_init_thread(self, project_name, language, other_options):
         try:
-            self.update_terminal(f"Initializing the project {project_name}...\n")
             output = self.meson_build.init(f"--name {project_name} --language {language} {other_options}")
             self.update_terminal(output)
         except Exception as e:
-            self.update_terminal(f"Error: {str(e)}\n")
+            self.update_terminal(f"Init Error: Project initialization failed - {str(e)}")
 
     def manage_subprojects(self):
         try:
             SubprojectsDialog(self.root, self.theme)
         except Exception as e:
-            tk.messagebox.showerror("Error", str(e))
+            tk.messagebox.showerror("Subprojects Error", f"Failed to open subprojects dialog: {str(e)}")
 
 
 def main():
